@@ -23,6 +23,11 @@
 #    define ITON_BT_BUFFER_LEN 16
 #endif
 
+// The NKRO frame contains a command byte and a 15-byte report.
+#if ITON_BT_BUFFER_LEN < 16
+#    error "ITON_BT_BUFFER_LEN must be at least 16 bytes"
+#endif
+
 /**
  * Driver Macros
  */
