@@ -190,6 +190,10 @@ void iton_bt_init(void) {
 }
 
 void iton_bt_send(uint8_t cmd, uint8_t *data, uint8_t len) {
+    if (len > sizeof(iton_bt_buffer) - 1) {
+        return;
+    }
+
     while (gpio_read_pin(ITON_BT_IRQ_LINE))
         ;
 
