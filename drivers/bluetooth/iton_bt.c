@@ -181,12 +181,12 @@ void iton_bt_init(void) {
 
     gpio_write_pin_low(ITON_BT_IRQ_LINE);
 
+    spiStart(&ITON_BT_SPI_PORT, &iton_bt_spicfg);
+
 #if defined(PAL_USE_CALLBACKS) && PAL_USE_CALLBACKS
     palSetLineCallback(ITON_BT_INT_LINE, iton_bt_rx_cb, NULL);
     palEnableLineEvent(ITON_BT_INT_LINE, PAL_EVENT_MODE_BOTH_EDGES);
 #endif
-
-    spiStart(&ITON_BT_SPI_PORT, &iton_bt_spicfg);
 }
 
 void iton_bt_send(uint8_t cmd, uint8_t *data, uint8_t len) {
