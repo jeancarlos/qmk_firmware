@@ -94,9 +94,9 @@ enum iton_bt_notification_param {
  * Exported Variables
  */
 #ifdef ITON_BT_ENABLE_LED_STATE
-uint8_t iton_bt_led_state;
+extern uint8_t iton_bt_led_state;
 #endif
-bool iton_bt_is_connected;
+extern bool iton_bt_is_connected;
 
 /**
  * Driver Callbacks
