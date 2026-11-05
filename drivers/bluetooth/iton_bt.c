@@ -69,7 +69,7 @@ const SPIConfig iton_bt_spicfg = {
 /**
  * Callbacks
  */
-#if defined(PAL_USE_CALLBACKS) || defined(PAL_USE_WAIT)
+#if defined(PAL_USE_CALLBACKS) && PAL_USE_CALLBACKS
 static inline void iton_bt_rx_battery_notif(uint8_t data) {
     switch (data) {
         case batt_voltage_low:
@@ -181,7 +181,7 @@ void iton_bt_init(void) {
 
     gpio_write_pin_low(ITON_BT_IRQ_LINE);
 
-#if defined(PAL_USE_CALLBACKS) || defined(PAL_USE_WAIT)
+#if defined(PAL_USE_CALLBACKS) && PAL_USE_CALLBACKS
     palSetLineCallback(ITON_BT_INT_LINE, iton_bt_rx_cb, NULL);
     palEnableLineEvent(ITON_BT_INT_LINE, PAL_EVENT_MODE_BOTH_EDGES);
 #endif
