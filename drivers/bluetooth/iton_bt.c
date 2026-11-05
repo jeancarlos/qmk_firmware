@@ -242,8 +242,8 @@ void iton_bt_send_consumer(uint16_t data) {
 void iton_bt_send_keyboard(report_keyboard_t *report) {
     // iton module only reads 5 of the keys in the hid report
     // so we send the last key as an nkro report.
-    if (report->keys[5] != iton_bt_send_kb_last_key) {
-        uint8_t nkro_report[15] = {0};
+    uint8_t nkro_report[15] = {0};
+    if (report->keys[5] != iton_bt_send_kb_last_key && (report->keys[5] >> 3) < sizeof(nkro_report)) {
         nkro_report[report->keys[5] >> 3] |= (1 << (report->keys[5] & 7));
         iton_bt_send_kb_last_key = report->keys[5];
 

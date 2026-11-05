@@ -63,3 +63,17 @@ size_t test_sent_length(void) {
 uint8_t test_sent_byte(size_t index) {
     return sent_bytes[index];
 }
+void test_keyboard_reset(void) {
+    iton_bt_send_kb_last_key = 0;
+    test_reset_sends();
+}
+uint8_t test_keyboard_cached_key(void) {
+    return iton_bt_send_kb_last_key;
+}
+void test_keyboard_send(uint8_t sixth, uint8_t mods, uint8_t first) {
+    report_keyboard_t report = {0};
+    report.keys[5]           = sixth;
+    report.keys[0]           = first;
+    report.mods              = mods;
+    iton_bt_send_keyboard(&report);
+}
