@@ -60,7 +60,10 @@ bool iton_bt_is_connected = false;
 uint8_t iton_bt_led_state = 0x00;
 #endif
 
-static uint8_t iton_bt_buffer[ITON_BT_BUFFER_LEN];
+#if defined(PAL_USE_CALLBACKS) && PAL_USE_CALLBACKS
+static uint8_t iton_bt_rx_buffer[ITON_BT_BUFFER_LEN];
+#endif
+static uint8_t iton_bt_tx_buffer[ITON_BT_BUFFER_LEN];
 uint8_t        iton_bt_send_kb_last_key = 0x00;
 
 const SPIConfig iton_bt_spicfg = {
@@ -109,7 +112,7 @@ static inline void iton_bt_rx_battery_notif(uint8_t data) {
 }
 
 static inline void iton_bt_rx_bluetooth_notif(uint8_t data) {
-    switch (iton_bt_buffer[2]) {
+    switch (iton_bt_rx_buffer[2]) {
         case bt_connection_success:
             iton_bt_is_connected = true;
 
@@ -140,7 +143,7 @@ static inline void iton_bt_rx_bluetooth_notif(uint8_t data) {
 static void iton_bt_rx_cb(void *arg) {
     if (gpio_read_pin(ITON_BT_INT_LINE)) {
         chSysLockFromISR();
-        spiStartReceiveI(&ITON_BT_SPI_PORT, ITON_BT_BUFFER_LEN, &iton_bt_buffer[0]);
+        spiStartReceiveI(&ITON_BT_SPI_PORT, ITON_BT_BUFFER_LEN, &iton_bt_rx_buffer[0]);
         chSysUnlockFromISR();
     } else {
         chSysLockFromISR();
@@ -152,19 +155,19 @@ static void iton_bt_rx_cb(void *arg) {
         gpio_write_pin_low(ITON_BT_IRQ_LINE);
 #    endif
 
-        switch (iton_bt_buffer[0]) {
+        switch (iton_bt_rx_buffer[0]) {
             case led_state:
 #    ifdef ITON_BT_ENABLE_LED_STATE
-                iton_bt_led_state = iton_bt_buffer[1];
+                iton_bt_led_state = iton_bt_rx_buffer[1];
 #    endif
                 break;
             case notification:
-                switch (iton_bt_buffer[1]) {
+                switch (iton_bt_rx_buffer[1]) {
                     case notif_battery:
-                        iton_bt_rx_battery_notif(iton_bt_buffer[2]);
+                        iton_bt_rx_battery_notif(iton_bt_rx_buffer[2]);
                         break;
                     case notif_bluetooth:
-                        iton_bt_rx_bluetooth_notif(iton_bt_buffer[2]);
+                        iton_bt_rx_bluetooth_notif(iton_bt_rx_buffer[2]);
                         break;
                 }
                 break;
@@ -195,7 +198,7 @@ void iton_bt_init(void) {
 }
 
 void iton_bt_send(uint8_t cmd, uint8_t *data, uint8_t len) {
-    if (len > sizeof(iton_bt_buffer) - 1) {
+    if (len > sizeof(iton_bt_tx_buffer) - 1) {
         return;
     }
 
@@ -203,9 +206,9 @@ void iton_bt_send(uint8_t cmd, uint8_t *data, uint8_t len) {
         ;
 
     gpio_write_pin_high(ITON_BT_IRQ_LINE);
-    iton_bt_buffer[0] = cmd;
-    memcpy(&iton_bt_buffer[1], data, len);
-    spiStartSend(&ITON_BT_SPI_PORT, len + 1, &iton_bt_buffer[0]);
+    iton_bt_tx_buffer[0] = cmd;
+    memcpy(&iton_bt_tx_buffer[1], data, len);
+    spiStartSend(&ITON_BT_SPI_PORT, len + 1, &iton_bt_tx_buffer[0]);
 }
 
 void iton_bt_send2(uint8_t cmd, uint8_t b1, uint8_t b2) {
@@ -213,20 +216,20 @@ void iton_bt_send2(uint8_t cmd, uint8_t b1, uint8_t b2) {
         ;
 
     gpio_write_pin_high(ITON_BT_IRQ_LINE);
-    iton_bt_buffer[0] = cmd;
-    iton_bt_buffer[1] = b1;
-    iton_bt_buffer[2] = b2;
+    iton_bt_tx_buffer[0] = cmd;
+    iton_bt_tx_buffer[1] = b1;
+    iton_bt_tx_buffer[2] = b2;
 
-    spiStartSend(&ITON_BT_SPI_PORT, 3, &iton_bt_buffer[0]);
+    spiStartSend(&ITON_BT_SPI_PORT, 3, &iton_bt_tx_buffer[0]);
 }
 
 inline void iton_bt_send_ack(uint8_t b1, uint8_t b2) {
     gpio_write_pin_high(ITON_BT_IRQ_LINE);
-    iton_bt_buffer[0] = control;
-    iton_bt_buffer[1] = b1;
-    iton_bt_buffer[2] = b2;
+    iton_bt_tx_buffer[0] = control;
+    iton_bt_tx_buffer[1] = b1;
+    iton_bt_tx_buffer[2] = b2;
     chSysLockFromISR();
-    spiStartSendI(&ITON_BT_SPI_PORT, 3, &iton_bt_buffer[0]);
+    spiStartSendI(&ITON_BT_SPI_PORT, 3, &iton_bt_tx_buffer[0]);
     chSysUnlockFromISR();
 }
 
