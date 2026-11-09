@@ -18,6 +18,36 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include QMK_KEYBOARD_H
 
+#ifdef BLUETOOTH_ITON_BT
+#    include "connection.h"
+#    include "iton_bt.h"
+#    include "usb_driver.h"
+#    include "usb_endpoints.h"
+
+extern usb_endpoint_in_t usb_endpoints_in[USB_ENDPOINT_IN_COUNT];
+
+static bool k2_mode_usb_idle(void) {
+    if (!usb_endpoint_in_is_inactive(&usb_endpoints_in[USB_ENDPOINT_IN_KEYBOARD])) return false;
+#    if defined(SHARED_EP_ENABLE)
+    if (!usb_endpoint_in_is_inactive(&usb_endpoints_in[USB_ENDPOINT_IN_SHARED])) return false;
+#    endif
+    return true;
+}
+
+static bool k2_mode_matrix_clear(void) {
+    for (uint8_t row = 0; row < MATRIX_ROWS; ++row) {
+        if (matrix_get_row(row)) return false;
+    }
+    return true;
+}
+/* Make the next matrix scan emit presses for keys held during the transition. */
+static void k2_mode_rearm_keys(void) {
+    extern matrix_row_t matrix_previous[MATRIX_ROWS];
+    for (uint8_t row = 0; row < MATRIX_ROWS; ++row) matrix_previous[row] = 0;
+}
+#    include "k2_mode_transition.inc"
+#endif
+
 // Each layer gets a name for readability, which is then used in the keymap matrix below.
 // The underscores don't mean anything - you can have a layer called STUFF or any other name.
 // Layer names don't all need to be of the same length, obviously, and you can also skip them
@@ -131,7 +161,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   */
   [MAC_FN] = LAYOUT_ansi(
   /*  0           1           2           3           4           5           6           7           8           9           10          11          12          13          14          15       */
-      Q_RESET,      KC_BRID,    KC_BRIU,    KC_MSSN,    KC_FIND,    RM_VALD,    RM_VALU,    KC_MPRV,    KC_MPLY,    KC_MNXT,    KC_MUTE,    KC_VOLD,    KC_VOLU,    KC_MSNP,    KC_INS,     RM_TOGG  ,
+      QK_BOOT,      KC_BRID,    KC_BRIU,    KC_MSSN,    KC_FIND,    RM_VALD,    RM_VALU,    KC_MPRV,    KC_MPLY,    KC_MNXT,    KC_MUTE,    KC_VOLD,    KC_VOLU,    KC_MSNP,    KC_INS,     RM_TOGG  ,
       _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,                _______  ,
       _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,                _______  ,
       _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,                _______,                _______  ,
@@ -150,23 +180,27 @@ bool dip_switch_update_user(uint8_t index, bool active) {
         layer_move(WIN_BASE);
       }
       break;
+#ifdef BLUETOOTH_ITON_BT
     case 1: // Connection switch
-      // Probably it's not possible to do anything sensible here as switching from Cable to BT requires turning off the board. (BT / OFF / Cable)
-      if (active) { // BT mode
-        // do stuff
-      }
-      else { //Cable mode
-        // do stuff
-      }
+      // The V1.13 firmware selects Bluetooth when D5 is high. DIP callbacks
+      // invert that level and run even before the SPI driver is initialized.
+      k2_mode_request(active ? CONNECTION_HOST_USB : CONNECTION_HOST_BLUETOOTH);
       break;
+#endif
   }
   return true;
 }
 
-void keyboard_post_init_user(void) {
-  // Customise these values to desired behaviour
-  // debug_enable = true;
-  // debug_matrix = true;
-  // debug_keyboard = true;
-  // debug_mouse = true;
+#ifdef BLUETOOTH_ITON_BT
+bool pre_process_record_user(uint16_t keycode, keyrecord_t *record) {
+    (void)record;
+    // Keep the bootloader shortcut available if the transport stalls.
+    return !k2_mode_blocks_keys() || keycode == MO(WIN_FN) || keycode == MO(MAC_FN) || keycode == QK_BOOT;
 }
+void housekeeping_task_user(void) {
+    k2_mode_task();
+}
+void keyboard_post_init_user(void) {
+    housekeeping_task_user();
+}
+#endif

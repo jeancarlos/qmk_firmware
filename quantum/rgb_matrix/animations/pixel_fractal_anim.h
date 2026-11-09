@@ -8,7 +8,7 @@ RGB_MATRIX_EFFECT(PIXEL_FRACTAL)
 
 static bool PIXEL_FRACTAL(effect_params_t *params) {
 #        define MID_COL ((MATRIX_COLS + 1) / 2)
-    static bool     led[MATRIX_ROWS][MID_COL];
+    static uint8_t  led[MATRIX_ROWS][(MID_COL + 7) / 8];
     static uint32_t wait_timer = 0;
 
     if (params->init) {
@@ -23,7 +23,7 @@ static bool PIXEL_FRACTAL(effect_params_t *params) {
         for (uint8_t row = 0; row < MATRIX_ROWS; ++row) {
             // Light columns outward from center, mirroring each side
             for (uint8_t col = 0; col < MID_COL; ++col) {
-                rgb_t   index_rgb = led[row][col] ? rgb : (rgb_t){0, 0, 0};
+                rgb_t   index_rgb = (led[row][col / 8] & (1u << (col % 8))) ? rgb : (rgb_t){0, 0, 0};
                 uint8_t l_idx     = g_led_config.matrix_co[row][col];
                 uint8_t r_idx     = g_led_config.matrix_co[row][MATRIX_COLS - 1 - col];
                 if (l_idx >= led_min && l_idx < led_max && HAS_ANY_FLAGS(g_led_config.flags[l_idx], params->flags)) {
@@ -38,8 +38,11 @@ static bool PIXEL_FRACTAL(effect_params_t *params) {
         // Advance state and reset timer only on the final LED range iteration
         if (!rgb_matrix_check_finished_leds(led_max)) {
             for (uint8_t row = 0; row < MATRIX_ROWS; ++row) {
-                memmove(led[row], led[row] + 1, (MID_COL - 1) * sizeof(bool));
-                led[row][MID_COL - 1] = !(random8() & 3);
+                for (uint8_t byte = 0; byte < sizeof(led[row]); ++byte) {
+                    led[row][byte] = (led[row][byte] >> 1) | (byte + 1 < sizeof(led[row]) ? led[row][byte + 1] << 7 : 0);
+                }
+                uint8_t mask = 1u << ((MID_COL - 1) % 8);
+                led[row][(MID_COL - 1) / 8] = (led[row][(MID_COL - 1) / 8] & ~mask) | (!(random8() & 3) ? mask : 0);
             }
             wait_timer = g_rgb_timer + 3000 / scale16by8(qadd8(rgb_matrix_config.speed, 16), 16);
         }

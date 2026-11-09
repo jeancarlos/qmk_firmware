@@ -45,17 +45,28 @@ static void spiStartSend(SPIDriver *driver, size_t length, const void *data) {
 }
 static void chSysLockFromISR(void) {}
 static void chSysUnlockFromISR(void) {}
+static void chSysLock(void) {}
+static void chSysUnlock(void) {}
 static void spiStartSendI(SPIDriver *driver, size_t length, const void *data) {
     spiStartSend(driver, length, data);
 }
 #include "../../drivers/bluetooth/iton_bt.c"
 void test_reset_sends(void) {
+    iton_owner = ITON_IDLE;
+    iton_head = 0;
+    iton_count = 0;
+    iton_pending_len = 0;
+    iton_pending_keyboard = false;
     sends       = 0;
     sent_length = 0;
     memset(sent_bytes, 0, sizeof(sent_bytes));
 }
 unsigned test_sends(void) {
     return sends;
+}
+void test_advance_send(void) {
+    iton_bt_data_cb(&SPID0);
+    iton_bt_task();
 }
 size_t test_sent_length(void) {
     return sent_length;

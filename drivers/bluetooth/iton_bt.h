@@ -97,6 +97,8 @@ enum iton_bt_notification_param {
 extern uint8_t iton_bt_led_state;
 #endif
 extern bool iton_bt_is_connected;
+extern bool iton_bt_queue_overflow;
+extern bool iton_bt_rx_collision;
 
 /**
  * Driver Callbacks
@@ -119,8 +121,11 @@ void iton_bt_enters_connection_state(void);
  * Driver Functions
  */
 void iton_bt_init(void);
+void iton_bt_task(void);
+// Transport idle only; does not establish delivery over Bluetooth.
+bool iton_bt_is_idle(void);
 void iton_bt_send(uint8_t cmd, uint8_t *data, uint8_t len);
-void iton_bt_send2(uint8_t cmd, uint8_t b1, uint8_t b2);
+bool iton_bt_send2(uint8_t cmd, uint8_t b1, uint8_t b2);
 void iton_bt_send_ack(uint8_t b1, uint8_t b2);
 
 void iton_bt_send_fn(bool pressed);
