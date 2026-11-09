@@ -939,6 +939,7 @@ ifeq ($(strip $(BLUETOOTH_ENABLE)), yes)
     endif
 
     ifeq ($(strip $(BLUETOOTH_DRIVER)), iton_bt)
+        OPT_DEFS += -DHAL_USE_SPI=TRUE -DSN32_SPI_USE_SPI0=TRUE -DPAL_USE_CALLBACKS=TRUE
         SRC += $(DRIVER_PATH)/bluetooth/bluetooth_drivers.c
         SRC += $(DRIVER_PATH)/bluetooth/iton_bt.c
     endif
