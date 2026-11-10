@@ -23,5 +23,12 @@
 #define DIP_SWITCH_PINS { D4, D5 }
 
 #ifdef BLUETOOTH_ITON_BT
+// Refill SPI0 between radio clocks even during the PWM-driven matrix scan.
+#    define SN32_SPI_SPI0_IRQ_PRIORITY 1
+// Keep twelve ordinary press/release reports queued during a radio receive.
+#    define ITON_BT_QUEUE_SIZE 128
+#    define ITON_BT_ENABLE_ACK
+// The stock V1.13 firmware answers B6 5A 08 with A6 51 00.
+#    define ITON_BT_UNKNOWN_ACK 0x00
 #    define ITON_BT_ENABLE_LED_STATE
 #endif

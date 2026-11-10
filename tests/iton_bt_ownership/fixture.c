@@ -5,14 +5,31 @@
 #include <string.h>
 #include "config.h"
 
+void set_time(uint32_t time);
+
+#define MCU_SN32
+#define SPI_DATA_LENGTH(n) (n)
+enum { SPI_READY = 2 };
+typedef struct {
+    struct { bool BUSY, RX_EMPTY, TX_EMPTY; } STAT_b;
+    struct { bool RXFIFOTHIF; } RIS_b;
+} SPIRegisters;
+static SPIRegisters regs;
 typedef struct {
     bool ready;
+    unsigned state;
+    SPIRegisters *spi;
 } SPIDriver;
 typedef struct {
     bool slave;
     void (*data_cb)(SPIDriver *);
+    unsigned ctrl0;
 } SPIConfig;
-static SPIDriver SPID0;
+static SPIDriver SPID0 = {.spi = &regs};
+static bool defer_fifo_reset;
+#define SPI_FIFO_FRESET(spip) do { \
+    (spip)->spi->STAT_b.TX_EMPTY = !defer_fifo_reset; \
+} while (0)
 #define A0 0
 #define A1 1
 static bool tx_active;
@@ -48,6 +65,7 @@ static void gpio_set_pin_input(int pin) {
 }
 static void spiStart(SPIDriver *driver, const SPIConfig *config) {
     driver->ready = true;
+    driver->state = SPI_READY;
     active_config = config;
 }
 static void spiStartSend(SPIDriver *driver, size_t length, const void *data) {
@@ -58,6 +76,10 @@ static void spiStartSend(SPIDriver *driver, size_t length, const void *data) {
     sent_length = length;
     active_tx_buffer = data;
     memcpy(sent_bytes, data, length < sizeof(sent_bytes) ? length : sizeof(sent_bytes));
+    if (!regs.STAT_b.TX_EMPTY && length <= sizeof(sent_bytes)) {
+        memmove(&sent_bytes[1], sent_bytes, length - 1);
+        sent_bytes[0] = 0; /* The master clocks the residual idle byte first. */
+    }
 }
 static void chSysLockFromISR(void) {}
 static void chSysUnlockFromISR(void) {}
@@ -116,7 +138,12 @@ static void spiStopTransferI(SPIDriver *driver, void *remaining) {
     rx_active = false;
 }
 #include "../../drivers/bluetooth/iton_bt.c"
+unsigned test_queue_capacity(void) { return sizeof(iton_queue); }
 void test_reset(void) {
+    set_time(0);
+    memset(&regs, 0, sizeof(regs));
+    regs.STAT_b.TX_EMPTY = regs.STAT_b.RX_EMPTY = true;
+    defer_fifo_reset = false;
     SPID0.ready         = false;
     tx_active = false;
     rx_active = false;
@@ -133,6 +160,12 @@ void test_reset(void) {
     iton_bt_is_connected = false;
     iton_bt_led_state = 0;
     iton_owner = ITON_IDLE;
+    iton_owner_since = 0;
+    iton_tx_retry_len = 0;
+    iton_retry_pending = 0;
+    iton_ack_head = 0;
+    iton_ack_count = 0;
+    iton_last_was_ack = false;
     iton_head = 0;
     iton_count = 0;
     iton_pending_len = 0;
@@ -175,6 +208,7 @@ void test_prepare_edge_on_enable(void) {
 unsigned test_receive_count(void) {
     return receive_count;
 }
+bool test_receiving(void) { return rx_active; }
 void test_set_input_high(void) { interrupt_high = true; receive_count = 0; }
 bool test_receive_was_ready(void) {
     return receive_was_ready;
@@ -207,6 +241,14 @@ uint8_t test_last_sixth_key(void) { return iton_bt_send_kb_last_key; }
 bool test_rx_collision(void) { return iton_bt_rx_collision; }
 unsigned test_sends(void) { return sends; }
 uint8_t test_sent_byte(unsigned index) { return sent_bytes[index]; }
+void test_tx_residue(void) { regs.STAT_b.TX_EMPTY = false; }
+void test_spi_busy(bool busy) { regs.STAT_b.BUSY = busy; }
+void test_spi_irq_pending(bool pending) { regs.RIS_b.RXFIFOTHIF = pending; }
+void test_defer_fifo_reset(void) { defer_fifo_reset = true; }
+void test_complete_fifo_reset(void) {
+    defer_fifo_reset = false;
+    regs.STAT_b.TX_EMPTY = true;
+}
 void test_full_receive(void) {
     interrupt_high = true;
     line_callback(line_callback_arg);
@@ -270,8 +312,13 @@ void test_short_notification(void) {
     received_bytes = 2;
     test_falling_edge();
 }
-void test_receive_ack_notification(void) {
-    test_receive_notification(false);
+void test_receive_ack_notification(uint8_t type, uint8_t value) {
+    test_rising_edge();
+    rx_buffer[0] = 0xb6;
+    rx_buffer[1] = type;
+    rx_buffer[2] = value;
+    received_bytes = 3;
+    test_falling_edge();
 }
 bool test_connected(void) { return iton_bt_is_connected; }
 void test_enable_pending_drain(void) { drain_pending_on_stop = true; }

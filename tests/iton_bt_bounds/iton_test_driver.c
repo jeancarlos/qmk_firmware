@@ -50,6 +50,10 @@ static void chSysUnlock(void) {}
 static void spiStartSendI(SPIDriver *driver, size_t length, const void *data) {
     spiStartSend(driver, length, data);
 }
+static void spiStopTransferI(SPIDriver *driver, size_t *remaining) {
+    (void)driver;
+    (void)remaining;
+}
 #include "../../drivers/bluetooth/iton_bt.c"
 void test_reset_sends(void) {
     iton_owner = ITON_IDLE;

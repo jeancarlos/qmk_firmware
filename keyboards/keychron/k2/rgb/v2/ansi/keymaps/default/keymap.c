@@ -20,9 +20,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #ifdef BLUETOOTH_ITON_BT
 #    include "connection.h"
+#    include "dip_switch.h"
 #    include "iton_bt.h"
 #    include "usb_driver.h"
 #    include "usb_endpoints.h"
+#    ifdef ITON_BT_TIMING
+#        include "usb_device_state.h"
+#    endif
 
 extern usb_endpoint_in_t usb_endpoints_in[USB_ENDPOINT_IN_COUNT];
 
@@ -43,8 +47,12 @@ static bool k2_mode_matrix_clear(void) {
 /* Make the next matrix scan emit presses for keys held during the transition. */
 static void k2_mode_rearm_keys(void) {
     extern matrix_row_t matrix_previous[MATRIX_ROWS];
-    for (uint8_t row = 0; row < MATRIX_ROWS; ++row) matrix_previous[row] = 0;
+    for (uint8_t row = 0; row < MATRIX_ROWS; ++row) {
+        // Fn is processed even while blocked: retain its release history.
+        matrix_previous[row] &= row == 5 ? ((matrix_row_t)1 << 11) : 0;
+    }
 }
+#    include "k2_bt_profile.inc"
 #    include "k2_mode_transition.inc"
 #endif
 
@@ -192,15 +200,62 @@ bool dip_switch_update_user(uint8_t index, bool active) {
 }
 
 #ifdef BLUETOOTH_ITON_BT
+static bool k2_bt_shortcuts_active(void) {
+    return connection_get_host() == CONNECTION_HOST_BLUETOOTH &&
+           k2_mode_desired != CONNECTION_HOST_USB && !k2_mode_blocks_keys();
+}
+
+static bool k2_fn_active(void) {
+    return layer_state_is(WIN_FN) || layer_state_is(MAC_FN);
+}
+
 bool pre_process_record_user(uint16_t keycode, keyrecord_t *record) {
-    (void)record;
+    if (keycode >= KC_1 && keycode <= KC_3 &&
+        k2_bt_profile_key(keycode - KC_1, record->event.pressed, k2_bt_shortcuts_active() && k2_fn_active())) {
+        return false;
+    }
     // Keep the bootloader shortcut available if the transport stalls.
     return !k2_mode_blocks_keys() || keycode == MO(WIN_FN) || keycode == MO(MAC_FN) || keycode == QK_BOOT;
 }
 void housekeeping_task_user(void) {
     k2_mode_task();
+    k2_bt_profile_task(k2_bt_shortcuts_active(), k2_fn_active());
+#    ifdef ITON_BT_TIMING
+    static uint32_t last_log;
+    if (connection_get_host() == CONNECTION_HOST_USB && usb_device_state_get_configure_state() == USB_DEVICE_STATE_CONFIGURED && timer_elapsed32(last_log) >= 1000) {
+        last_log = timer_read32();
+        iton_bt_log_timing();
+    }
+#    endif
 }
+#    ifdef RGB_MATRIX_STATUS
+bool rgb_matrix_render_status_kb(void) {
+    static uint8_t last_led = K2_BT_NORMAL_RGB;
+    uint8_t led = K2_BT_NORMAL_RGB;
+    if (connection_get_host() == CONNECTION_HOST_BLUETOOTH || k2_mode_desired == CONNECTION_HOST_BLUETOOTH) {
+        led = k2_bt_status_led();
+    }
+    if (led == K2_BT_NORMAL_RGB) {
+        last_led = led;
+        return false;
+    }
+    if (led != last_led) {
+        rgb_matrix_set_color_all(0, 0, 0);
+        if (led > 0) {
+            const uint8_t white = RGB_MATRIX_MAXIMUM_BRIGHTNESS;
+            rgb_matrix_set_color(g_led_config.matrix_co[1][led], white, white, white);
+        }
+        rgb_matrix_update_pwm_buffers();
+        last_led = led;
+    }
+    return true;
+}
+#    endif
+
 void keyboard_post_init_user(void) {
+    k2_bt_load_profile(eeconfig_read_user());
+    gpio_set_pin_input(D5);
+    dip_switch_read(true);
     housekeeping_task_user();
 }
 #endif

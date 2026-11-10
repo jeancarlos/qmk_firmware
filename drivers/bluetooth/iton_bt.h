@@ -5,6 +5,10 @@
 
 #pragma once
 
+#ifdef ITON_BT_TIMING
+void iton_bt_log_timing(void);
+#endif
+
 /**
  * Driver Structures
  */
@@ -116,6 +120,7 @@ void iton_bt_connection_successful(void);
 void iton_bt_entered_pairing(void);
 void iton_bt_disconnected(void);
 void iton_bt_enters_connection_state(void);
+void iton_bt_profile_sent(uint8_t profile);
 
 /**
  * Driver Functions
@@ -124,6 +129,8 @@ void iton_bt_init(void);
 void iton_bt_task(void);
 // Transport idle only; does not establish delivery over Bluetooth.
 bool iton_bt_is_idle(void);
+// The predicate runs with the system locked and must not call locking APIs.
+bool iton_bt_enter_pairing_if(bool (*ready)(void));
 void iton_bt_send(uint8_t cmd, uint8_t *data, uint8_t len);
 bool iton_bt_send2(uint8_t cmd, uint8_t b1, uint8_t b2);
 void iton_bt_send_ack(uint8_t b1, uint8_t b2);

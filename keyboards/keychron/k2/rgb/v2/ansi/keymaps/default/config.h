@@ -6,3 +6,7 @@
 #if defined(BLUETOOTH_ITON_BT) && !defined(WEAR_LEVELING_LOGICAL_SIZE)
 #    define WEAR_LEVELING_LOGICAL_SIZE 512
 #endif
+
+#ifdef BLUETOOTH_ITON_BT
+#    define RGB_MATRIX_STATUS
+#endif
