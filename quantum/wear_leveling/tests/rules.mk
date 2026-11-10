@@ -21,6 +21,10 @@ wear_leveling_general_SRC := \
 wear_leveling_general_INC := \
 	$(wear_leveling_common_INC)
 
+wear_leveling_k2_DEFS := $(wear_leveling_common_DEFS) -DBACKING_STORE_WRITE_SIZE=4 -DWEAR_LEVELING_BACKING_SIZE=2048 -DWEAR_LEVELING_LOGICAL_SIZE=512
+wear_leveling_k2_SRC := $(wear_leveling_common_SRC) $(QUANTUM_PATH)/wear_leveling/tests/wear_leveling_k2.cpp
+wear_leveling_k2_INC := $(wear_leveling_common_INC)
+
 wear_leveling_2byte_optimized_writes_DEFS := \
 	$(wear_leveling_common_DEFS) \
 	-DBACKING_STORE_WRITE_SIZE=2 \

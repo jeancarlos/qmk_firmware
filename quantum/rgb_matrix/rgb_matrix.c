@@ -408,8 +408,24 @@ static void rgb_task_flush(uint8_t effect) {
     rgb_task_state = SYNCING;
 }
 
+#ifdef RGB_MATRIX_STATUS
+__attribute__((weak)) bool rgb_matrix_render_status_kb(void) {
+    return false;
+}
+#endif
+
 void rgb_matrix_task(void) {
     rgb_task_timers();
+
+#ifdef RGB_MATRIX_STATUS
+    if (rgb_matrix_render_status_kb()) {
+        eeconfig_flush_rgb_matrix(false);
+        // Resume the configured effect with a full redraw after the status frame.
+        rgb_last_effect = UINT8_MAX;
+        rgb_task_state = STARTING;
+        return;
+    }
+#endif
 
     uint8_t effect = rgb_current_effect;
 

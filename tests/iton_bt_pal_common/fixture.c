@@ -46,6 +46,8 @@ static void spiStartSend(SPIDriver *driver, size_t length, const void *data) {
 }
 static void chSysLockFromISR(void) {}
 static void chSysUnlockFromISR(void) {}
+static void chSysLock(void) {}
+static void chSysUnlock(void) {}
 static void spiStartSendI(SPIDriver *driver, size_t length, const void *data) {
     spiStartSend(driver, length, data);
 }
@@ -83,6 +85,9 @@ static void palEnableLineEvent(int pin, int mode) {
 #define spiStopTransferI(driver, remaining) ((void)0)
 #include "../../drivers/bluetooth/iton_bt.c"
 void test_reset(void) {
+    iton_owner = ITON_IDLE;
+    iton_head = 0;
+    iton_count = 0;
     SPID0.ready         = false;
     interrupt_high      = false;
     callback_registered = 0;

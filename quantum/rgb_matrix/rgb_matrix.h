@@ -172,6 +172,10 @@ void rgb_matrix_task(void);
 // colors already set
 void rgb_matrix_indicators(void);
 bool rgb_matrix_indicators_kb(void);
+#ifdef RGB_MATRIX_STATUS
+// Return true while displaying a status frame in place of the configured effect.
+bool rgb_matrix_render_status_kb(void);
+#endif
 bool rgb_matrix_indicators_user(void);
 
 void rgb_matrix_indicators_advanced(effect_params_t *params);

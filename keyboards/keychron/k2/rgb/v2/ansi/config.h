@@ -15,3 +15,4 @@
  */
 
 #define RGB_MATRIX_LED_COUNT 84
+#define RGB_MATRIX_CENTER { 94, 32 }

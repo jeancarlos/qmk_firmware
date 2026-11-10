@@ -38,6 +38,8 @@ void bluetooth_init(void) {
 void bluetooth_task(void) {
 #if defined(BLUETOOTH_BLUEFRUIT_LE)
     bluefruit_le_task();
+#elif defined(BLUETOOTH_ITON_BT)
+    iton_bt_task();
 #endif
 }
 
@@ -79,3 +81,15 @@ void bluetooth_send_consumer(uint16_t usage) {
     iton_bt_send_consumer(usage);
 #endif
 }
+
+#if defined(BLUETOOTH_ITON_BT)
+#    if defined(ITON_BT_ENABLE_LED_STATE)
+uint8_t bluetooth_keyboard_leds(void) {
+    return iton_bt_led_state;
+}
+#    endif
+
+void bluetooth_send_system(uint16_t usage) {
+    iton_bt_send_system(usage);
+}
+#endif

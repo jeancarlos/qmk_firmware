@@ -8,7 +8,6 @@
 #define DIODE_DIRECTION COL2ROW
 #define SN32F2 1
 #define SN32F240B 1
-#define SN32F2XX_RGB_MATRIX_ROW_PINS {0}
 #define SN32F2XX_RGB_MATRIX_COL_PINS {0}
 #define SN32F2XX_LED_COUNT 84
 #define PWM_OUTPUT_ACTIVE_HIGH 1
@@ -26,7 +25,26 @@
 #define PAL_IOPORTS_WIDTH 16
 #define A0 0
 #define B0 16
+#define C0 32
+#define C1 33
+#define C3 35
+#define C4 36
+#define C5 37
+#define C6 38
+#define C7 39
+#define C8 40
+#define C9 41
+#define C10 42
+#define C11 43
+#define C12 44
+#define C13 45
+#define C14 46
 #define C15 47
+#define B13 29
+#define B14 30
+#define B15 31
+#define D3 51
+#include "../../../../keyboards/keychron/k2/rgb/v2/config.h"
 #define FLASH_PGM 1
 typedef int pin_t;
 typedef struct {
